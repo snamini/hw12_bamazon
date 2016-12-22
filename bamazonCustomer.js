@@ -12,64 +12,61 @@ var connection = mysql.createConnection({
 
 connection.connect(function(err) {
   if (err) throw err;
-  console.log("connected as id " + connection.threadId);
-    runSearch();
+    displayItems();
+    askQuestions();
 });
 
-var runSearch = function() {
-        connection.query("SELECT * FROM products", function(err, res) {
-            if (err) throw err;
-            console.log(res.length);
+var displayItems = function() {
+    connection.query("SELECT * FROM products", function(err, res) {
+        if (err) throw err;
 
-            var table = new Table({
-                head: ['id', 'name', 'department', 'price', 'stock'],
-                colWidths: [20, 20, 40, 20, 20]
-            });
-
-            // table is an Array, so you can `push`, `unshift`, `splice` and friends
-
-            for (i = 0; i < res.length; i++) {
-                table.push(
-                    [res[i].item_id, res[i].product_name, res[i].department_name, res[i].price, res[i].stock_quantity]
-                );
-            }
-            console.log(table.toString());
-
+        var table = new Table({
+          head: ['id', 'name', 'department', 'price', 'stock'],
+          colWidths: [20, 20, 40, 20, 20]
         });
 
-        inquirer.prompt({
-                name: "product_id",
-                type: "input",
-                message: "Which product would you like to buy? Name by ID.",
-            }).then(function(answer1) {
-                    console.log(answer1.product_id);
+            // table is an Array, so you can `push`
 
-                    inquirer.prompt({
-                        name: "qty",
-                        type: "input",
-                        message: "How many would you like?",
-                    }).then(function(answer2) {
+        for (i = 0; i < res.length; i++) {
+          table.push(
+            [res[i].item_id, res[i].product_name, res[i].department_name, res[i].price, res[i].stock_quantity]
+            );
+        }
+        console.log(table.toString());
+    });
+};
 
-                      connection.query("SELECT stock_quantity FROM products Where item_id = " + answer2.qty, function(err, res) {
-                          if (err) throw err;
-                          console.log(res);
+var askQuestions = function() {
+  inquirer.prompt({
+      name: "product_id",
+      type: "input",
+      message: "Which product would you like to buy? Name by ID.",
+  }).then(function(answer1) {
+      console.log(answer1.product_id);
 
-                          if (answer2.qty <= res[0].stock_quantity) {
-                            console.log("YIPPIE! YOU CAN PURCHASE :D");
+  inquirer.prompt({
+      name: "qty",
+      type: "input",
+      message: "How many would you like?",
+  }).then(function(answer2) {
+      connection.query("SELECT stock_quantity FROM products Where item_id = " + answer2.qty, function(err, res) {
+          if (err) throw err;
+          console.log(res);
 
-                            connection.query("UPDATE products SET stock_quantity = stock_quantity - " + answer2.qty + " WHERE item_id=" + answer1.product_id, function(err, res) {
-                                if (err) throw err;
-                                console.log(res);
-                              });
+          if (answer2.qty <= res[0].stock_quantity) {
+          console.log("YIPPIE! YOU CAN PURCHASE :D");
 
-                          } else {
-                            console.log("You're out of luck kid. All sold out.");
-                          }
-                        });
+          connection.query("UPDATE products SET stock_quantity = stock_quantity - " + answer2.qty + " WHERE item_id=" + answer1.product_id, function(err, res) {
+            if (err) throw err;
+            console.log(res);
+          });
 
+          } else {
+            console.log("You're out of luck kid. All sold out.");
+            askQuestions();
+          }
+      });
 
-                            // decrease stock number in table
-
-                        });
-                    });
-  };
+  });
+  });
+};
